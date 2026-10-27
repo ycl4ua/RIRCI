@@ -4,6 +4,8 @@
 
 Yicheng Leng, Chaowei Fang, Gen Li, Yixiang Fang, Guanbin Li
 
+![Overview of our framework](assets/overview.png)
+
 ## Overview
 
 We propose **RIRCI**, a two-stage framework for visible watermark removal that

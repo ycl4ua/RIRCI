@@ -35,4 +35,8 @@ The stage-2 design (dual-path background restoration with global/local context
 interaction and non-local fusion) and its loss terms are the contribution of
 this paper.
 
-Please retain this NOTICE when redistributing the code.
+The Apache-2.0 license text for the components above is included in
+third_party_licenses/Apache-2.0.txt.
+
+Please retain this NOTICE and the third_party_licenses directory when
+redistributing the code.
