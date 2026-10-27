@@ -44,9 +44,9 @@ class Losses(nn.Module):
         pred_ims = [self.denorm(pred_im*immask + (1-immask)*self.norm(target)) for pred_im in pred_ims]
 
         # L_r / L_i: restoration below the opacity threshold, imagination above it
-        # (Eq. 6 and 7; alpha = 0.75, gamma = 1.5).
-        low_opacity = mask * (alpha < 0.75).float()
-        high_opacity = mask * (alpha >= 0.75).float()
+        # (Eq. 6 and 7; gamma = 1.5, threshold given by --alpha).
+        low_opacity = mask * (alpha < self.args.alpha).float()
+        high_opacity = mask * (alpha >= self.args.alpha).float()
         restoration_loss += (self.masked_l1_loss(pred_ims[1], target, low_opacity) + self.l1_loss(pred_ims[1], target) * 1.5)
         inpainting_loss += (self.masked_l1_loss(pred_ims[2], target, high_opacity) + self.l1_loss(pred_ims[2], target) * 1.5)
 

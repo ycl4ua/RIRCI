@@ -107,7 +107,7 @@ python train.py \
     --checkpoint checkpoints \
     --name rirci \
     --epochs 100 --schedule 65 --lr 1e-3 \
-    --train-batch 8 --test-batch 1
+    --train-batch 8 --test-batch 1 --alpha 0.75
 ```
 
 or `DATASET_DIR=/path/to/RIRCI bash scripts/train.sh`.

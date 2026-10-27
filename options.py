@@ -52,8 +52,10 @@ class Options():
                             help='weight of the IoU loss on the calibrated mask')
         parser.add_argument('--lambda_primary', default=0.01, type=float,
                             help='weight of the primary mask prediction')
-        parser.add_argument('--lambda_mask', default=2, type=float,
+        parser.add_argument('--lambda_mask', default=3, type=float,
                             help='weight of the mask loss')
+        parser.add_argument('--alpha', default=0.75, type=float,
+                            help='watermark opacity threshold in Eq. (6) and (7)')
 
         # Data
         parser.add_argument('--dataset', default='rirci', type=str,
