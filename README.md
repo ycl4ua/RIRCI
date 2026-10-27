@@ -70,35 +70,6 @@ pip install -r requirements.txt
 The code targets Python 3.8+ and a CUDA GPU. The perceptual loss uses a
 torchvision VGG16 backbone, whose weights are downloaded on first use.
 
-## Dataset
-
-**The HWVOC and PW datasets are not released with this repository.** The reader
-below documents the layout used in the paper so that a compatible split can be
-built from your own background images and watermarks.
-
-```
-RIRCI/
-├── train/
-│   ├── watermarked/     # J = A * W + (1 - A) * I
-│   ├── gt/              # I, the watermark-free image
-│   ├── mask/            # M = 255 * (A > 0)
-│   ├── cleancomp/       # C_b = (1 - A) * I
-│   └── alpha/           # A, saved as 0-255 grayscale
-├── valid/
-│   └── (the same five folders)
-└── test/                # optional
-    └── (the same five folders)
-```
-
-- All five folders are required; `alpha/` is needed because the training loss
-  is split by watermark opacity.
-- A sample is identified by its file stem, and the stem must match across all
-  five folders. `.png` is recommended.
-- The paper uses 256x256 images. HWVOC contains 60,000 training and 2,500 test
-  images built from PASCAL VOC2012 backgrounds and 858 watermark logos; PW
-  contains 60,000 training and 1,045 test images built from 2,435 private
-  backgrounds.
-
 ## Training
 
 ```bash
@@ -112,9 +83,13 @@ python train.py \
 
 or `DATASET_DIR=/path/to/RIRCI bash scripts/train.sh`.
 
-The defaults in `options.py` match the configuration above. Checkpoints,
-TensorBoard logs and the resolved command line are written under
-`checkpoints/<name>/`.
+The defaults in `options.py` match the configuration above: Adam with learning
+rate `1e-3`, 100 epochs, batch size 8, and the learning rate decayed at epoch
+65. `--alpha` is the watermark opacity threshold in Eq. (6) and (7) of the
+paper (default `0.75`). Checkpoints, TensorBoard logs and the resolved command
+line are written under `checkpoints/<name>/`.
+
+**Trained weights are not released with this repository.**
 
 ## Evaluation
 
@@ -128,7 +103,8 @@ python test.py \
     --eval_split val
 ```
 
-`test.py` reports PSNR, SSIM, RMSE, RMSE_w, mask IoU and mask F1, and saves
+`--eval_split` selects the `valid/` directory (default) or `test/`. The script
+reports PSNR, SSIM, RMSE, RMSE_w, mask IoU and mask F1, and saves
 `[input | ground truth | prediction | I_r | I_i | Ĉ_b]` panels under
 `checkpoints/<name>/results/`.
 
@@ -144,15 +120,93 @@ python infer.py \
 Each output is an `[input | restored | predicted mask]` panel. Inputs are
 resized to `--crop_size` (256 by default).
 
+## Dataset construction
+
+**The HWVOC and PW datasets are not released with this repository.** The layout
+below is what the reader expects, so you can build a compatible split from your
+own background images and watermarks.
+
+### Directory layout
+
+```
+RIRCI/
+├── train/
+│   ├── watermarked/     # J = A * W + (1 - A) * I
+│   │   ├── 000000.png
+│   │   └── ...
+│   ├── gt/              # I, the watermark-free image
+│   ├── mask/            # M = 255 * (A > 0)
+│   ├── cleancomp/       # C_b = (1 - A) * I
+│   └── alpha/           # A, saved as 0-255 grayscale
+├── valid/
+│   └── (the same five folders)
+└── test/                # optional, selected with --eval_split test
+    └── (the same five folders)
+```
+
+- All five folders are required; `alpha/` is needed because the training loss is
+  split by watermark opacity.
+- A sample is identified by its file stem, and the stem must match across all
+  five folders. `.png` is recommended to avoid compression artifacts.
+- The paper uses 256x256 images. HWVOC contains 60,000 training and 2,500 test
+  images built from PASCAL VOC2012 backgrounds and 858 watermark logos; PW
+  contains 60,000 training and 1,045 test images built from 2,435 private
+  backgrounds.
+
+### Semantics
+
+| Folder | Content |
+|---|---|
+| `watermarked/` | `J = (1 - A) * I + A * W` |
+| `gt/` | clean background `I` |
+| `mask/` | `M = 255 * (A > 0)` |
+| `cleancomp/` | `C_b = (1 - A) * I` (background component; **not** blacked out) |
+| `alpha/` | watermark opacity `A`, saved as 0-255 grayscale |
+
+### Minimal example
+
+The following snippet builds one sample from a background image and an RGBA
+watermark:
+
+```python
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+root = Path("RIRCI/train")
+for sub in ("watermarked", "gt", "mask", "cleancomp", "alpha"):
+    (root / sub).mkdir(parents=True, exist_ok=True)
+
+I = np.asarray(Image.open("background.png").convert("RGB"), dtype=np.float32) / 255.0
+wm = Image.open("watermark.png").convert("RGBA").resize((I.shape[1], I.shape[0]))
+W = np.asarray(wm.convert("RGB"), dtype=np.float32) / 255.0
+A = np.asarray(wm.getchannel("A"), dtype=np.float32) / 255.0
+
+J = (1 - A[..., None]) * I + A[..., None] * W
+Cb = (1 - A[..., None]) * I
+M = (A > 0).astype(np.uint8) * 255
+
+stem = "000000.png"
+Image.fromarray((I * 255).round().astype(np.uint8)).save(root / "gt" / stem)
+Image.fromarray((J * 255).round().astype(np.uint8)).save(root / "watermarked" / stem)
+Image.fromarray((Cb * 255).round().astype(np.uint8)).save(root / "cleancomp" / stem)
+Image.fromarray(M).save(root / "mask" / stem)
+Image.fromarray((A * 255).round().astype(np.uint8)).save(root / "alpha" / stem)
+```
+
+For the real dataset, watermarks are randomly scaled, rotated and placed (not
+necessarily covering the whole image), then the five folders are saved with
+matching stems.
+
 ## Notes
 
-- **Trained weights are not released.**
-- There is no built-in data generator: the paper's datasets were produced by
-  randomly scaling, rotating and placing watermark logos on background images,
-  then saving the five folders described above.
 - Stage 1 follows the shared-decoder design of SLBR (Liang et al., 2021); the
   two-stage decomposition, the dual-path restoration network and the GLCI
   module are this paper's contribution. See `NOTICE` for upstream projects.
+- There is no built-in data generator: the paper's datasets were produced by
+  randomly scaling, rotating and placing watermark logos on background images,
+  then saving the five folders described above.
 
 ## Citation
 
