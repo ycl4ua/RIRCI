@@ -37,7 +37,6 @@ class GridGatingUnit(nn.Module):
   def forward(self, x):
     u, v = torch.chunk(x, 2, dim=-1)
     v = self.LN1(v)
-    #n = x.shape[-3]   # get spatial dim
     v = v.transpose(-1, -3)
     v = self.linear(v)
     v = v.transpose(-1, -3)
@@ -70,7 +69,6 @@ class GridGmlpLayer(nn.Module):
     y = self.gelu(y)
     y = self.ggu(y)
     y = self.linear2(y)
-    #y = nn.Dropout(self.dropout_rate)(y, deterministic)
     x = x + y
     x = unblock_images_einops(x, grid_size=(gh, gw), patch_size=(fh, fw))
     x = self.linear3(x)
@@ -92,7 +90,6 @@ class BlockGatingUnit(nn.Module):
   def forward(self, x):
     u, v = torch.chunk(x, 2, dim=-1)
     v = self.LN1(v)
-    #n = x.shape[-3]   # get spatial dim
     v = v.transpose(-1, -2)
     v = self.linear(v)
     v = v.transpose(-1, -2)
@@ -125,7 +122,6 @@ class BlockGmlpLayer(nn.Module):
     y = self.gelu(y)
     y = self.bgu(y)
     y = self.linear2(y)
-    #y = nn.Dropout(self.dropout_rate)(y, deterministic)
     x = x + y
     x = unblock_images_einops(x, grid_size=(gh, gw), patch_size=(fh, fw))
     x = self.linear3(x)

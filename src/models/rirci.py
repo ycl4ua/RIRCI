@@ -11,74 +11,50 @@ from evaluation import AverageMeter, compute_IoU, FScore, compute_RMSE
 import torch.nn.functional as F
 from src.utils.parallel import DataParallelModel, DataParallelCriterion
 from src.utils.losses import VGGLoss, l1_relative,is_dic
-import torchvision
-import pytorch_iou
-import pytorch_ssim
-from pytorch_msssim import SSIM
+
 
 class Losses(nn.Module):
+    """Objective of the paper: Eq. (5)-(10)."""
+
     def __init__(self, argx, device, norm_func, denorm_func):
         super(Losses, self).__init__()
         self.args = argx
         self.masked_l1_loss, self.mask_loss = l1_relative, nn.BCELoss()
         self.l1_loss = nn.L1Loss()
-
-        if self.args.lambda_content > 0:
-            self.vgg_loss = VGGLoss(self.args.sltype, style=self.args.lambda_style>0).to(device)
-        
-        if self.args.lambda_iou > 0:
-            self.iou_loss = pytorch_iou.IOU(size_average=True)
-
-        self.lambda_primary = self.args.lambda_primary
-        self.gamma = 0.5
+        self.vgg_loss = VGGLoss().to(device) if self.args.lambda_content > 0 else None
         self.norm = norm_func
         self.denorm = denorm_func
-        self.ssim_module = SSIM(data_range=1.0, size_average=True, channel=3)
 
     def forward(self, synthesis, pred_ims, target, pred_mask, mask, comp, alpha, threshold=0.5):
         pixel_loss, refine_loss, vgg_loss, mask_loss, restoration_loss, inpainting_loss = [0]*6
         pred_ims = pred_ims if is_dic(pred_ims) else [pred_ims]
-        
+
+        # L_b: background component, supervised against C_b (Eq. 5).
+        pixel_loss += self.masked_l1_loss(pred_ims[-1], comp, mask)
+
         immask = pred_mask[0]
-        immask = torch.where(immask > 0.5 , torch.ones_like(immask), torch.zeros_like(immask)).to(immask.device)
-        # reconstruction loss
-        pixel_loss += self.masked_l1_loss(pred_ims[-1], comp, mask)#coarse stage 
-        pred_ims = [ self.denorm(pred_im*immask + (1-immask)*self.norm(target)) for pred_im in pred_ims ]    
-        
-        restoration_loss += (self.masked_l1_loss(pred_ims[1], target, mask * torch.where(alpha < 0.75, torch.ones_like(alpha), torch.zeros_like(alpha)).to(alpha.device)) + self.l1_loss(pred_ims[1], target) * 1.5)
-        inpainting_loss += (self.masked_l1_loss(pred_ims[2], target, mask * torch.where(alpha >= 0.75, torch.ones_like(alpha), torch.zeros_like(alpha)).to(alpha.device)) + self.l1_loss(pred_ims[2], target) * 1.5)
-        if len(pred_ims) > 1:
-            refine_loss = (self.masked_l1_loss(pred_ims[0], target, mask) + self.l1_loss(pred_ims[0], target) * 1.5) # refinement stage
-        
-        #ssim_loss += (1 - self.ssim_module(pred_ims[0], target))    
-        #refine_loss += sum([self.l1_loss(im,target) for im in recov_imgs[0]]) * 1.5
-        
-        target = [target, target, target, comp]
-        #target = [target, target, target, target]
+        immask = torch.where(immask > 0.5, torch.ones_like(immask), torch.zeros_like(immask)).to(immask.device)
+        pred_ims = [self.denorm(pred_im*immask + (1-immask)*self.norm(target)) for pred_im in pred_ims]
 
-        if self.args.lambda_content > 0:
-            vgg_loss = [self.vgg_loss(pred_ims[im],target[im],mask) for im in range(len(pred_ims))]
-            vgg_loss = sum([vgg['content'] for vgg in vgg_loss]) * self.args.lambda_content + \
-                       sum([vgg['style'] for vgg in vgg_loss]) * self.args.lambda_style
-        
+        # L_r / L_i: restoration below the opacity threshold, imagination above it
+        # (Eq. 6 and 7; alpha = 0.75, gamma = 1.5).
+        low_opacity = mask * (alpha < 0.75).float()
+        high_opacity = mask * (alpha >= 0.75).float()
+        restoration_loss += (self.masked_l1_loss(pred_ims[1], target, low_opacity) + self.l1_loss(pred_ims[1], target) * 1.5)
+        inpainting_loss += (self.masked_l1_loss(pred_ims[2], target, high_opacity) + self.l1_loss(pred_ims[2], target) * 1.5)
+
+        # L_f: final reconstruction (Eq. 8).
+        refine_loss = (self.masked_l1_loss(pred_ims[0], target, mask) + self.l1_loss(pred_ims[0], target) * 1.5)
+
+        # Perceptual loss on every predicted image (Eq. 4).
+        if self.vgg_loss is not None:
+            vgg_targets = [target, target, target, comp]
+            vgg_loss = sum(self.vgg_loss(pred_ims[i], vgg_targets[i])
+                           for i in range(len(pred_ims))) * self.args.lambda_content
+
+        # L_m: mask prediction (Eq. 9).
         pred_ms = [F.interpolate(ms, size=mask.shape[2:], mode='bilinear') for ms in pred_mask]
-        pred_ms = [pred_m.clamp(0,1) for pred_m in pred_ms]
-        mask = mask.clamp(0,1)
-
-        final_mask_loss = 0
-        final_mask_loss += self.mask_loss(pred_ms[0], mask)
-        
-        primary_mask = pred_ms[1::2][::-1]
-        self_calibrated_mask = pred_ms[2::2][::-1]
-        # primary prediction
-        primary_loss =  sum([self.mask_loss(pred_m, mask) * (self.gamma**i) for i,pred_m in enumerate(primary_mask)])
-        # self calibrated Branch
-        self_calibrated_loss =  sum([self.mask_loss(pred_m, mask) * (self.gamma**i) for i,pred_m in enumerate(self_calibrated_mask)])
-        if self.args.lambda_iou > 0:
-            self_calibrated_loss += sum([self.iou_loss(pred_m, mask) * (self.gamma**i) for i,pred_m in enumerate(self_calibrated_mask)]) * self.args.lambda_iou
-
-        mask_loss += (final_mask_loss + self_calibrated_loss + self.lambda_primary * primary_loss)
-        #mask_loss += self.mask_loss(pred_mask, mask)
+        mask_loss += self.mask_loss(pred_ms[0].clamp(0, 1), mask.clamp(0, 1))
 
         return pixel_loss, restoration_loss, inpainting_loss, refine_loss, vgg_loss, mask_loss
 
@@ -120,7 +96,6 @@ class RIRCI(BasicModel):
             target = batches['target'].float().to(self.device)
             comp = batches['comp'].float().to(self.device)
             mask = batches['mask'].float().to(self.device)
-            #wm =  batches['watermark'].float().to(self.device)
             alpha = batches['alpha'].float().to(self.device)
             img_path = batches['img_path']
             
@@ -141,7 +116,6 @@ class RIRCI(BasicModel):
             loss_restoration_meter.update(restoration_loss.item(), inputs.size(0))
             loss_inpainting_meter.update(inpainting_loss.item(), inputs.size(0))                        
             loss_mask_meter.update(mask_loss.item(), inputs.size(0))
-            #loss_ssim_meter.update(ssim_loss.item(), inputs.size(0))
             if self.args.lambda_content > 0  and not isinstance(vgg_loss,int):
                 loss_vgg_meter.update(vgg_loss.item(), inputs.size(0))
             
@@ -228,17 +202,12 @@ class RIRCI(BasicModel):
                 inputs = batches['image'].to(self.device)
                 target = batches['target'].to(self.device)
                 mask = batches['mask'].float().to(self.device)
-                # alpha_gt = batches['alpha'].float().to(self.device)
 
                 outputs = self.model(self.norm(inputs))
 
                 imoutput= outputs[0]
                 
                 immask = outputs[1][0]
-#                if len(imoutput) > 1:
-#                    imcoarse = imoutput[1]
-#                    imcoarse = imcoarse*immask + inputs*(1-immask)
-#                else: imcoarse = None
                 imcoarse = None
                 imoutput = imoutput[0] if is_dic(imoutput) else imoutput
 
@@ -315,7 +284,6 @@ class RIRCI(BasicModel):
                             )
                 if i%100 == 0:
                     print(suffix)
-                # bar.next()
         print("Total:")
         print(suffix)
         bar.finish()

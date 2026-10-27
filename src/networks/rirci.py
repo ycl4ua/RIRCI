@@ -24,7 +24,6 @@ class CoarseEncoder(nn.Module):
         for i in range(depth):
             ins = in_channels if i == 0 else outs
             outs = start_filters*(2**i)
-            # pooling = True if i < depth-1 else False
             pooling = True
             down_conv = DownConv(ins, outs, blocks, pooling=pooling, residual=residual, norm=norm, act=act)
             self.down_convs.append(down_conv)
@@ -82,7 +81,6 @@ class SharedBottleNeck(nn.Module):
         mask_encoder_outs = []
         x = input
         for i, d_conv in enumerate(self.down_convs):
-            # d_conv, attn = nets
             x, before_pool = d_conv(x)
             im_encoder_outs.append(before_pool)
             mask_encoder_outs.append(before_pool)
@@ -232,7 +230,6 @@ class Restoration(nn.Module):
                 result2 = torch.cat((result1.detach(), result2), 1)
             result1, result1_before = down_conv1(result1)
             result2, result2_before = down_conv2(result2)
-            #if torch.sum(~torch.isfinite(result2)) > 0: print('down',torch.sum(~torch.isfinite(result2)))
             result1_befores.append(result1_before)
             result2_befores.append(result2_before)
         l2 = len(self.up_convs_inpainting)
@@ -241,7 +238,6 @@ class Restoration(nn.Module):
             up_conv2 = self.up_convs_inpainting[l2-i-1]
             result1 = up_conv1(result1, result1_befores[l2-i-1])
             result2 = up_conv2(result2, result2_befores[l2-i-1])
-            #if torch.sum(~torch.isfinite(result2)) > 0: print('up',torch.sum(~torch.isfinite(result2)))
         result1 = (input_restoration + torch.tanh(self.conv_final_restoration(result1))).clamp(0,1)
         result2 = (input_inpainting + torch.tanh(self.conv_final_inpainting(result2))).clamp(0,1)
         fused_x = torch.cat([result1, result2], dim=1)

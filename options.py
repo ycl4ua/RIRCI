@@ -43,19 +43,11 @@ class Options():
 
         # Loss weights (the HWVOC / PW setting reported in the paper)
         parser.add_argument('--lambda_l1', type=float, default=2,
-                            help='weight of the pixel losses')
-        parser.add_argument('--lambda_primary', type=float, default=0.01,
-                            help='weight of the primary mask prediction')
-        parser.add_argument('--lambda_style', default=0.25, type=float,
-                            help='weight of the VGG style loss')
-        parser.add_argument('--lambda_content', default=0.25, type=float,
-                            help='weight of the VGG perceptual loss')
-        parser.add_argument('--lambda_iou', default=0.25, type=float,
-                            help='weight of the IoU loss on the calibrated mask')
-        parser.add_argument('--lambda_mask', default=2, type=float,
-                            help='weight of the mask loss')
-        parser.add_argument('--sltype', default='vggx', type=str,
-                            help='perceptual loss backbone')
+                            help='lambda_1: weight of the pixel losses')
+        parser.add_argument('--lambda_content', default=1, type=float,
+                            help='lambda_2: weight of the VGG perceptual loss')
+        parser.add_argument('--lambda_mask', default=3, type=float,
+                            help='lambda_3: weight of the mask loss')
 
         # Data
         parser.add_argument('--dataset', default='rirci', type=str,
@@ -68,16 +60,12 @@ class Options():
         parser.add_argument('--input-size', default=256, type=int, metavar='N',
                             help='network input size')
         parser.add_argument('--crop_size', default=256, type=int)
-        parser.add_argument('--preprocess', default='resize', type=str)
-        parser.add_argument('--no_flip', action='store_true')
 
         # Checkpoints / misc
         parser.add_argument('-c', '--checkpoint', default='checkpoints', type=str,
                             metavar='PATH', help='checkpoint directory')
         parser.add_argument('--resume', default='', type=str, metavar='PATH',
                             help='checkpoint to resume from (default: none)')
-        parser.add_argument('--finetune', default='', type=str, metavar='PATH',
-                            help='checkpoint to initialise the weights from')
         parser.add_argument('--name', default='rirci', type=str,
                             help='experiment name used as a sub-directory')
         parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
@@ -85,8 +73,6 @@ class Options():
         parser.add_argument('--freq', default=-1, type=int, metavar='N',
                             help='validate every N iterations; negative means every epoch')
         parser.add_argument('--gpu_id', default='0', type=str)
-        parser.add_argument('--debug', dest='debug', action='store_true',
-                            help='show intermediate results')
 
         # Architecture switches kept from the code base
         parser.add_argument('--mask_mode', default='res', type=str)  # vanilla, cat, ca, psp, res
@@ -96,13 +82,7 @@ class Options():
         parser.add_argument('--k_center', default=2, type=int,
                             help='1 for foreground only, 2 for background and foreground')
         parser.add_argument('--use_refine', action='store_true')
-        parser.add_argument('--k_refine', default=3, type=int)
-        parser.add_argument('--k_skip_stage', default=3, type=int)
-        parser.add_argument('--masked', default=False, type=bool)
         parser.add_argument('--gan-norm', default=False, type=bool)
         parser.add_argument('--hl', default=False, type=bool)
-        parser.add_argument('--loss-type', default='l2', type=str)
-        parser.add_argument('--alpha', type=float, default=0.5)
-        parser.add_argument('--sigma-decay', default=0, type=float)
 
         return parser

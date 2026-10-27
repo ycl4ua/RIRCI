@@ -38,11 +38,6 @@ def adjust_learning_rate(datasets, model, epoch, lr,args):
         for optimizer in optimizers:
             for param_group in optimizer.param_groups:
                 lr = param_group['lr']
-    # decay sigma
-    # for dset in datasets:
-    #     if args.sigma_decay > 0:
-    #         dset.dataset.sigma *=  args.sigma_decay
-    #         dset.dataset.sigma *=  args.sigma_decay
 
     return lr
 

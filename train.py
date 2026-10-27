@@ -59,13 +59,11 @@ def main(args):
         
     train_loader = torch.utils.data.DataLoader(dataset_func('train',args),batch_size=args.train_batch, shuffle=True,
     num_workers=args.workers, pin_memory=True)
-    #print('this is length_train_loder',len(train_loader))
     val_loader = torch.utils.data.DataLoader(dataset_func('val',args),batch_size=args.test_batch, shuffle=False,
     num_workers=args.workers, pin_memory=True)
 
     lr = args.lr
     data_loaders = (train_loader,val_loader)
-    #data_loaders = train_loader
     model = models.__dict__[args.models](datasets=data_loaders, args=args)
     print('============================ Initization Finish && Training Start =============================================')
 
@@ -75,8 +73,6 @@ def main(args):
 
         model.record('lr',lr, epoch)        
         model.train(epoch)
-        #break
-        # model.validate(epoch)
         if args.freq < 0:
             model.validate(epoch)
             model.flush()

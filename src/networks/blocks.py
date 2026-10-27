@@ -76,7 +76,6 @@ def up_conv3x3(in_channels, out_channels, transpose=True, stage = 1):
         return nn.Sequential(
             nn.Upsample(mode='bilinear', scale_factor=2),
             conv3x3(in_channels, out_channels))
-#        return nn.Sequential(conv1x1(in_channels, out_channels * 4), nn.PixelShuffle(2), conv3x3(out_channels, out_channels))
 
 
 class UpConv(nn.Module):
@@ -205,68 +204,6 @@ class UpConv(nn.Module):
             else:
                 return x2
 
-#class UpConv(nn.Module):
-#    def __init__(self, in_channels, out_channels, blocks, residual=True, norm=nn.BatchNorm2d,
-#                 act=F.relu, concat=True, use_att=False, use_mask=False, dilations=[], out_fuse=False):
-#        super(UpConv, self).__init__()
-#        self.concat = concat
-#        self.residual = residual
-#        self.conv2 = []
-#        self.use_att = use_att
-#        self.use_mask = use_mask
-#
-#        self.out_fuse = out_fuse
-#        self.up_conv = up_conv3x3(in_channels, out_channels, transpose=False)
-#        if isinstance(norm, str):
-#            if norm == 'bn':
-#                norm = nn.BatchNorm2d
-#            elif norm == 'in':
-#                norm = nn.InstanceNorm2d
-#            else:
-#                raise TypeError("Unknown Type:\t{}".format(norm))
-#        self.norm0 = norm(out_channels)
-#        if len(dilations) == 0: dilations = [1] * blocks
-#
-#        if self.concat:
-#            self.conv1 = conv3x3(out_channels + int(use_mask), out_channels)
-#            self.norm1 = norm(out_channels)
-#        else:
-#            self.conv1 = conv3x3(out_channels, out_channels)
-#            self.norm1 = norm(out_channels)
-#        for i in range(blocks):
-#            self.conv2.append(conv3x3(out_channels, out_channels, dilation=dilations[i], padding=dilations[i]))
-#
-#        self.bn = []
-#        for _ in range(blocks):
-#            self.bn.append(norm(out_channels))
-#        self.bn = nn.ModuleList(self.bn)
-#        self.conv2 = nn.ModuleList(self.conv2)
-#        self.act = act
-#
-#    def forward(self, from_up, from_down = None, mask=None, se=None):
-#        if from_down is not None:
-#            from_up = self.act(self.norm0(self.up_conv(torch.cat((from_up, from_down), 1))))
-#        else:
-#            from_up = self.act(self.norm0(self.up_conv(from_up)))
-#
-#        xfuse = x1 = self.act(self.norm1(self.conv1(from_up)))
-#        x2 = None
-#        for idx, conv in enumerate(self.conv2):
-#            x2 = conv(x1)
-#            x2 = self.bn[idx](x2)
-#
-#            if (se is not None) and (idx == len(self.conv2) - 1):  # last
-#                x2 = se(x2)
-#
-#            if self.residual:
-#                x2 = x2 + x1
-#            x2 = self.act(x2)
-#            x1 = x2
-#        if self.out_fuse:
-#            return x2, xfuse
-#        else:
-#            return x2
-
 
 class DownConv(nn.Module):
 
@@ -295,7 +232,6 @@ class DownConv(nn.Module):
             self.bn.append(norm(out_channels))
         self.bn = nn.ModuleList(self.bn)
         if self.pooling:
-            #self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
             self.pool = nn.Sequential(nn.PixelUnshuffle(2), conv1x1(4 * out_channels, out_channels))
         self.conv2 = nn.ModuleList(self.conv2)
         self.act = act
@@ -393,50 +329,24 @@ class EdgeEnhancedDown(nn.Module):
     def __init__(self, blocks, in_channels=3, out_channels=512, norm=nn.BatchNorm2d, act=F.relu, ds = True):
         super(EdgeEnhancedDown, self).__init__()
         self.ds = ds
-        #self.conv1edge = conv3x3(in_channels, out_channels // 2)
         self.conv1result = conv3x3(in_channels, out_channels // 2)
-        #self.attn_edge = ECABlock(out_channels // 2)
         self.attn_result = ECABlock(out_channels // 2)
-        #self.conv2edge = conv3x3(out_channels, out_channels // 2)
-        #self.conv2result = FeedForward(out_channels // 2)
-        #self.LGBlock_edge = FFC_BN_ACT(in_channels=out_channels // 2, out_channels=out_channels // 2, ratio_gin=0.5, ratio_gout=0.5)
         self.LGBlock_result = FFC_BN_ACT(in_channels=out_channels // 2, out_channels=out_channels // 2, ratio_gin=0.125 * (np.log2(out_channels) - 5), ratio_gout=0.125 * (np.log2(out_channels) - 4))
         if ds:
-            #self.down1 = DownConv(out_channels // 2, out_channels, blocks=blocks, pooling=True, residual=True, norm=norm, act=act)
             self.down2 = DownConv(out_channels // 2, out_channels, blocks=blocks, pooling=True, residual=True, norm=norm, act=act)
-#        if isinstance(norm, str):
-#            if norm == 'bn':
-#                norm = nn.BatchNorm2d
-#            elif norm == 'in':
-#                norm = nn.InstanceNorm2d
-#            else:
-#                raise TypeError("Unknown Type:\t{}".format(norm))
-        #self.norm1edge = norm(out_channels // 2)
         self.norm1result = norm(out_channels // 2)
         self.norm2 = norm(out_channels // 2)
         self.norm3 = norm(out_channels // 2)
-        #self.norm2edge = norm(out_channels // 2)
-        #self.norm2result = norm(out_channels // 2)
         self.act = act
 
     def forward(self, from_up2):
-        #from_up1 = self.norm1edge(self.conv1edge(from_up1))
-        #attn1 = self.attn_edge(from_down)
-        #from_up1 = self.act(from_up1 + attn1)
         from_up2 = self.act(self.norm1result(self.conv1result(from_up2)))
 
-        #r1 = self.LGBlock_edge(from_up1)
-        #r2 = self.conv2result(torch.cat((r1, from_up2), 1))
         result2 = from_up2 + self.LGBlock_result(from_up2)
         result2 = self.norm2(result2)
-        #result2 = result2 + self.conv2result(result2)
-        #result2 = self.norm3(result2)
-        #result1 = self.act(self.norm2edge(self.conv2edge(torch.cat((r1, result2), 1))))
-        #result1_before = result1
         result2_before = result2
 
         if self.ds: 
-            #result1 = self.act(self.down1(result1)[0])
             result2 = self.act(self.down2(result2)[0])
 
         return result2, result2_before
@@ -444,40 +354,19 @@ class EdgeEnhancedDown(nn.Module):
 class EdgeEnhancedUp(nn.Module):
     def __init__(self, in_channels=512, out_channels=3, norm=nn.BatchNorm2d, act=F.relu):
         super(EdgeEnhancedUp, self).__init__()
-        #self.up1 = up_conv3x3(in_channels, out_channels, transpose=False)
         self.up2 = up_conv3x3(in_channels, out_channels, transpose=False)
-        #self.conv1edge = conv3x3(out_channels, out_channels)
         self.conv1result = conv3x3(out_channels, out_channels)
-        #self.conv2edge = conv3x3(2 * out_channels, out_channels)
-        #self.conv2result = FeedForward(out_channels)
-        #self.LGBlock_edge = FFC_BN_ACT(in_channels=out_channels, out_channels=out_channels, ratio_gin=0.5, ratio_gout=0.5)
         self.LGBlock_result = FFC_BN_ACT(in_channels=out_channels, out_channels=out_channels, ratio_gin=0.125 * (np.log2(in_channels) - 4), ratio_gout=0.125 * (np.log2(in_channels) - 5))
         
-#        if isinstance(norm, str):
-#            if norm == 'bn':
-#                norm = nn.BatchNorm2d
-#            elif norm == 'in':
-#                norm = nn.InstanceNorm2d
-#            else:
-#                raise TypeError("Unknown Type:\t{}".format(norm))
-        #self.norm1edge = norm(out_channels)
-        #self.norm1result = norm(out_channels)
-        #self.norm2edge = norm(out_channels)
         self.norm1 = norm(out_channels)
         self.norm3 = norm(out_channels)
         self.act = act
 
     def forward(self, from_up2, from_down2):
-        #from_up1 = self.act(self.norm1edge(self.conv1edge(self.up1(from_up1))) + from_down1)
         from_up2 = self.act(self.conv1result(self.up2(from_up2)) + from_down2)
 
-        #r1 = self.LGBlock_edge(from_up1)
-        #r2 = self.conv2result(torch.cat((r1, from_up2), 1))
         result2 = from_up2 + self.LGBlock_result(from_up2)
         result2 = self.norm1(result2)
-        #result2 = result2 + self.conv2result(result2)
-        #result2 = self.norm3(result2)
-        #result1 = self.act(self.norm2edge(self.conv2edge(torch.cat((r1, result2), 1))))
 
         return result2
         
@@ -604,22 +493,13 @@ class SMRBlock(nn.Module):
         ])
         self.self_calibrated = SelfAttentionSimple(self.mode, outs, sim_metric=args.sim_metric, k_center=args.k_center,
                                                    project_mode=args.project_mode)
-#        self.attn = self.refine_branch = nn.Sequential(*[
-#            nn.Conv2d(outs + 1, 1, 1, 1, 0),
-#            nn.Sigmoid()
-#        ])
-        #self.self_calibrated = MEUModule(outs * 2, outs, outs)
 
     def forward(self, input, encoder_outs=None):
         # upconv features
         mask_x, fuse_x = self.upconv(input, encoder_outs)
         primary_mask = self.primary_mask(mask_x)
         mask_x, self_calibrated_mask = self.self_calibrated(mask_x, mask_x, primary_mask)
-        #attn = self.attn(torch.cat((mask_x, self_calibrated_mask), 1))
         
-#        mask_x, fuse_x = self.upconv(input)
-#        primary_mask = self.primary_mask(mask_x)
-#        mask_x, self_calibrated_mask = self.self_calibrated(encoder_outs, mask_x)
         return {"feats": [mask_x], "attn_maps": [primary_mask, self_calibrated_mask]}
 
 class SelfAttentionSimple(nn.Module):
@@ -696,7 +576,6 @@ class SelfAttentionSimple(nn.Module):
         b_num, c, h, w = xin.shape
         attention_score = self.compute_attention(xin, xout, xmask)  # b,h*w,k
         attention_score = attention_score.reshape(b_num, 1, h, w)
-        #attn1, attn2 = attention_score.chunk(2, dim = 1)
         return xout, attention_score.sigmoid()
 
 class ResDownNew(nn.Module):

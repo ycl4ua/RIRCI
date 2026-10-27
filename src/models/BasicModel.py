@@ -22,7 +22,6 @@ from src.utils.losses import VGGLoss
 
 class BasicModel(object):
     def __init__(self, datasets =(None,None), models = None, args = None, **kwargs):
-    #def __init__(self, datasets=None, models=None, args=None, **kwargs):
         super(BasicModel, self).__init__()
         
         self.args = args
@@ -33,7 +32,6 @@ class BasicModel(object):
         print("==> creating model [Finish]")
        
         self.train_loader, self.val_loader = datasets
-        #self.train_loader = datasets
         self.loss = torch.nn.MSELoss()
         
         self.title = args.name
@@ -58,13 +56,11 @@ class BasicModel(object):
         self.hl = 6 if self.args.hl else 1
         self.count_gpu = len(range(torch.cuda.device_count()))
 
-        if self.args.lambda_style > 0:
+        if self.args.lambda_content > 0:
             # init perception loss
-            self.vggloss = VGGLoss(self.args.sltype).to(self.device)
+            self.vggloss = VGGLoss().to(self.device)
 
         if self.count_gpu > 1 : # multiple
-            # self.model = DataParallelModel(self.model, device_ids=range(torch.cuda.device_count()))
-            # self.loss = DataParallelCriterion(self.loss, device_ids=range(torch.cuda.device_count()))
             self.model.multi_gpu()
 
         self.model.to(self.device)
@@ -103,12 +99,12 @@ class BasicModel(object):
                 output = self.model(feeded)
                 L2_loss =  self.loss(output,target) 
                 
-                if self.args.lambda_style > 0:
-                    vgg_loss = self.vggloss(output,target,mask)
+                if self.args.lambda_content > 0:
+                    vgg_loss = self.vggloss(output, target)
                 else:
                     vgg_loss = 0
 
-                total_loss = L2_loss + self.args.lambda_style * vgg_loss
+                total_loss = L2_loss + self.args.lambda_content * vgg_loss
 
                 # compute gradient and do SGD step
                 self.optimizer.zero_grad()
@@ -118,7 +114,7 @@ class BasicModel(object):
                 # measure accuracy and record loss
                 losses.update(L2_loss.item(), inputs.size(0))
                 
-                if self.args.lambda_style > 0 :
+                if self.args.lambda_content > 0:
                     lossvgg.update(vgg_loss.item(), inputs.size(0))
                 
                 # measure elapsed time
@@ -194,7 +190,6 @@ class BasicModel(object):
         self.metric = psnres.avg
         
     def resume(self,resume_path):
-        # if isfile(resume_path):
         if not os.path.exists(resume_path):
             resume_path = os.path.join(self.args.checkpoint, 'checkpoint.pth.tar')
         if not os.path.exists(resume_path):
@@ -228,8 +223,6 @@ class BasicModel(object):
         print("=> loaded checkpoint '{}' (epoch {})"
                 .format(resume_path, current_checkpoint['epoch']))
 
-#    def resume(self,resume_path):
-#        resumePartNet(self.model, resume_path)
         
         
     def save_checkpoint(self,filename='checkpoint.pth.tar', snapshot=None):
@@ -320,78 +313,3 @@ def start_with(inp, strs):
             return True
     return False
     
-def resumePartNet(model,model_root):
-    #model_dir=os.path.join(model_root,version,fil)
-    model_dir = model_root
-    #model_dir1, model_dir2 = model_root.split(' ')
-    src_state_dict=torch.load(model_dir, map_location=lambda storage, loc:storage)
-    
-#    new_state_dict = OrderedDict()
-#    for k in src_state_dict['state_dict']:
-#        name = k.replace('module.', '')
-#        new_state_dict[name] = src_state_dict['state_dict'].setdefault(k)
-#    src_state_dict['state_dict'] = new_state_dict
-
-#    new_state_dict = OrderedDict()
-#    for k in src_state_dict['state_dict']:
-#        name = k.split('.')
-#        name1 = name[0] + '_0.module.'
-#        name2 = '.'.join(name[1:])
-#        name = name1 + name2
-#        new_state_dict[name] = src_state_dict['state_dict'].setdefault(k)
-#    src_state_dict['state_dict'] = new_state_dict
-
-    #src_state_dict['state_dict'] = src_state_dict['state_dict'].module
-    print(src_state_dict['epoch'])
-    src_state_dict = src_state_dict['state_dict']
-    dst_state_dict = model.state_dict()
-    for src_name,src_param in src_state_dict.items():
-        strs=src_name.split('.')
-        #if strs[0] in part:
-        if src_name not in dst_state_dict.keys():
-            print('Parameter {} does not exists!'.format(src_name))
-        else:
-            if isinstance(src_param,torch.nn.Parameter):
-                src_param = src_param.data
-            dst_param=dst_state_dict[src_name]
-            if src_param.size()!=dst_param.size():
-                print('inconsistent sizes for {}'.format(src_name))
-                set_dst_param(src_param,dst_param)
-            else:
-                dst_param.copy_(src_param)
-                
-#    src_state_dict=torch.load(model_dir2, map_location=lambda storage, loc:storage)
-#    
-##    new_state_dict = OrderedDict()
-##    for k in src_state_dict['state_dict']:
-##        name = k.replace('module.', '')
-##        new_state_dict[name] = src_state_dict['state_dict'].setdefault(k)
-##    src_state_dict['state_dict'] = new_state_dict
-#
-#    new_state_dict = OrderedDict()
-#    for k in src_state_dict['state_dict']:
-#        name = k.split('.')
-#        name1 = name[0] + '.module.'
-#        name2 = '.'.join(name[1:])
-#        name = name1 + name2
-#        new_state_dict[name] = src_state_dict['state_dict'].setdefault(k)
-#    src_state_dict['state_dict'] = new_state_dict
-#
-#    #src_state_dict['state_dict'] = src_state_dict['state_dict'].module
-#    print(src_state_dict['epoch'])
-#    src_state_dict = src_state_dict['state_dict']
-#    dst_state_dict = model.state_dict()
-#    for src_name,src_param in src_state_dict.items():
-#        strs=src_name.split('.')
-#        #if strs[0] in part:
-#        if src_name not in dst_state_dict.keys():
-#            print('Parameter {} does not exists!'.format(src_name))
-#        else:
-#            if isinstance(src_param,torch.nn.Parameter):
-#                src_param = src_param.data
-#            dst_param=dst_state_dict[src_name]
-#            if src_param.size()!=dst_param.size():
-#                print('inconsistent sizes for {}'.format(src_name))
-#                set_dst_param(src_param,dst_param)
-#            else:
-#                dst_param.copy_(src_param)

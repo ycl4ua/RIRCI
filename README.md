@@ -56,7 +56,6 @@ src/
   modules/               # FFC / spectral transform and gMLP layers
   utils/                 # losses, checkpointing and small helpers
 pytorch_ssim/            # vendored SSIM implementation
-pytorch_iou/             # vendored IoU loss
 scripts/train.sh
 scripts/test.sh
 ```
@@ -108,8 +107,7 @@ python train.py \
     --name rirci \
     --epochs 100 --schedule 65 --lr 1e-3 \
     --train-batch 8 --test-batch 1 \
-    --lambda_l1 2 --lambda_content 0.25 --lambda_style 0.25 \
-    --lambda_mask 2 --lambda_primary 0.01 --lambda_iou 0.25
+    --lambda_l1 2 --lambda_content 1 --lambda_mask 3
 ```
 
 or `DATASET_DIR=/path/to/RIRCI bash scripts/train.sh`.
@@ -149,6 +147,9 @@ resized to `--crop_size` (256 by default).
 ## Notes
 
 - **Trained weights are not released.**
+- The training objective follows Eq. (2)-(10) of the paper: masked L1, VGG16
+  perceptual loss, mask BCE, with `lambda_1 = 2`, `lambda_2 = 1`,
+  `lambda_3 = 3`, `gamma = 1.5` and opacity threshold `alpha = 0.75`.
 - There is no built-in data generator: the paper's datasets were produced by
   randomly scaling, rotating and placing watermark logos on background images,
   then saving the five folders described above.

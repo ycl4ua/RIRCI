@@ -56,7 +56,6 @@ class SpectralNorm(nn.Module):
             v.data = l2normalize(torch.mv(torch.t(w.view(height,-1).data), u.data))
             u.data = l2normalize(torch.mv(w.view(height,-1).data, v.data))
 
-        # sigma = torch.dot(u.data, torch.mv(w.view(height,-1).data, v.data))
         sigma = u.dot(w.view(height, -1).mv(v))
         setattr(self.module, self.name, w / sigma.expand_as(w))
 
@@ -108,17 +107,12 @@ class SNDiscriminator(nn.Module):
             SNCoXvWithActivation(4*cnum, 8*cnum, 4, 2, padding=get_pad(64, 5, 2)),
             SNCoXvWithActivation(8*cnum, 8*cnum, 4, 2, padding=get_pad(32, 5, 2)),
             SNCoXvWithActivation(8*cnum, 8*cnum, 4, 2, padding=get_pad(16, 5, 2)), # 8*8*256
-            # SNConvWithActivation(8*cnum, 8*cnum, 4, 2, padding=get_pad(8, 5, 2)), # 4*4*256
-            # SNConvWithActivation(8*cnum, 8*cnum, 4, 2, padding=get_pad(4, 5, 2)), # 2*2*256
         )
-        # self.linear = nn.Linear(2*2*256,1)
 
     def forward(self, img_A, img_B):
         # Concatenate image and condition image by channels to produce input
         img_input = torch.cat((img_A, img_B), 1)
         x = self.discriminator_net(img_input)
-        # x = x.view((x.size(0),-1))
-        # x = self.linear(x)
         return x
 
 class Discriminator(nn.Module):

@@ -9,7 +9,6 @@ opencv-python>=4.5
 Pillow>=9
 scikit-image>=0.19
 scikit-learn>=1.0
-pytorch_msssim>=0.2
 
 # Logging / progress
 tqdm>=4.62
