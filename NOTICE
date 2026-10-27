@@ -1,0 +1,38 @@
+This repository builds on the following open-source projects. Their original
+licenses and notices apply to the corresponding files.
+
+1. SLBR: Visible Watermark Removal via Self-calibrated Localization and
+   Background Refinement
+   https://github.com/bcmi/SLBR-Visible-Watermark-Removal
+   The stage-1 backbone (shared-decoder U-Net, SMR and MBE blocks) and the
+   overall training scaffold are adapted from this repository. The upstream
+   project does not declare a license; please confirm its terms before
+   redistributing those files.
+   Files: src/networks/blocks.py, src/networks/rirci.py (stage 1),
+          src/models/BasicModel.py
+
+2. MAXIM: Multi-Axis MLP for Image Processing
+   https://github.com/google-research/maxim
+   License: Apache-2.0
+   Files: src/modules/MAXIM.py (GridGmlpLayer local/global MLP)
+          src/modules/FFT.py (FFC / spectral transform)
+
+3. Fast Fourier Convolution (FFC)
+   https://github.com/pkumivision/FFC
+   License: Apache-2.0
+   Files: src/modules/FFT.py
+
+4. pytorch-ssim
+   https://github.com/Po-Hsun-Su/pytorch-ssim
+   License: MIT
+   Files: pytorch_ssim/__init__.py
+
+5. pytorch_iou (IoU loss for mask supervision)
+   Vendored without an upstream header; the original terms apply.
+   Files: pytorch_iou/__init__.py
+
+The stage-2 design (dual-path background restoration with global/local context
+interaction and non-local fusion) and its loss terms are the contribution of
+this paper.
+
+Please retain this NOTICE when redistributing the code.

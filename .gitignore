@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Checkpoints and experiment outputs
+*.pth
+*.pth.tar
+*.ckpt
+checkpoints/
+inference_output/
+script-*.txt
+
+# Datasets
+data/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
