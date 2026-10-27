@@ -62,8 +62,6 @@ class Options():
                             help='dataset reader registered in datasets/')
         parser.add_argument('--dataset_dir', default='data/RIRCI', type=str,
                             metavar='PATH', help='dataset root (contains train/ and valid/)')
-        parser.add_argument('--test_dir', default='', type=str, metavar='PATH',
-                            help='optional override for the evaluation split')
         parser.add_argument('--eval_split', default='val', type=str,
                             choices=['val', 'test'],
                             help='split evaluated by test.py')
@@ -91,11 +89,12 @@ class Options():
                             help='show intermediate results')
 
         # Architecture switches kept from the code base
-        parser.add_argument('--mask_mode', default='cat', type=str)  # vanilla, cat, ca, psp
+        parser.add_argument('--mask_mode', default='res', type=str)  # vanilla, cat, ca, psp, res
         parser.add_argument('--bg_mode', default='res_mask', type=str)  # vanilla, res_mask, res_feat, proposed
         parser.add_argument('--sim_metric', default='cos', type=str)
         parser.add_argument('--project_mode', default='simple', type=str)
-        parser.add_argument('--k_center', default=1, type=int)
+        parser.add_argument('--k_center', default=2, type=int,
+                            help='1 for foreground only, 2 for background and foreground')
         parser.add_argument('--use_refine', action='store_true')
         parser.add_argument('--k_refine', default=3, type=int)
         parser.add_argument('--k_skip_stage', default=3, type=int)
