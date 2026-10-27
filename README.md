@@ -4,6 +4,8 @@
 
 Yicheng Leng, Chaowei Fang, Gen Li, Yixiang Fang, Guanbin Li
 
+[[Paper (AAAI)]](https://doi.org/10.1609/aaai.v38i4.28080)
+
 ![Overview of our framework](assets/overview.png)
 
 ## Overview
