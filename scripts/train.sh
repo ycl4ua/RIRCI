@@ -22,6 +22,9 @@ CUDA_VISIBLE_DEVICES=${GPU} python train.py \
     --input-size 256 \
     --crop_size 256 \
     --lambda_l1 2 \
-    --lambda_content 1 \
+    --lambda_content 0.25 \
+    --lambda_style 0.25 \
+    --lambda_iou 0.25 \
+    --lambda_primary 0.01 \
     --lambda_mask 3 \
     --use_refine

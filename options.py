@@ -43,11 +43,17 @@ class Options():
 
         # Loss weights (the HWVOC / PW setting reported in the paper)
         parser.add_argument('--lambda_l1', type=float, default=2,
-                            help='lambda_1: weight of the pixel losses')
-        parser.add_argument('--lambda_content', default=1, type=float,
-                            help='lambda_2: weight of the VGG perceptual loss')
+                            help='weight of the pixel losses')
+        parser.add_argument('--lambda_content', default=0.25, type=float,
+                            help='weight of the VGG perceptual loss')
+        parser.add_argument('--lambda_style', default=0.25, type=float,
+                            help='weight of the VGG style loss')
+        parser.add_argument('--lambda_iou', default=0.25, type=float,
+                            help='weight of the IoU loss on the calibrated mask')
+        parser.add_argument('--lambda_primary', default=0.01, type=float,
+                            help='weight of the primary mask prediction')
         parser.add_argument('--lambda_mask', default=3, type=float,
-                            help='lambda_3: weight of the mask loss')
+                            help='weight of the mask loss')
 
         # Data
         parser.add_argument('--dataset', default='rirci', type=str,

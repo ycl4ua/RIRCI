@@ -58,7 +58,7 @@ class BasicModel(object):
 
         if self.args.lambda_content > 0:
             # init perception loss
-            self.vggloss = VGGLoss().to(self.device)
+            self.vggloss = VGGLoss(style=self.args.lambda_style > 0).to(self.device)
 
         if self.count_gpu > 1 : # multiple
             self.model.multi_gpu()
@@ -100,11 +100,13 @@ class BasicModel(object):
                 L2_loss =  self.loss(output,target) 
                 
                 if self.args.lambda_content > 0:
-                    vgg_loss = self.vggloss(output, target)
+                    vgg = self.vggloss(output, target)
+                    vgg_loss = vgg['content'] * self.args.lambda_content + \
+                               vgg['style'] * self.args.lambda_style
                 else:
                     vgg_loss = 0
 
-                total_loss = L2_loss + self.args.lambda_content * vgg_loss
+                total_loss = L2_loss + vgg_loss
 
                 # compute gradient and do SGD step
                 self.optimizer.zero_grad()

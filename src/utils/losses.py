@@ -1,12 +1,13 @@
-"""Loss components used by RIRCI (Eq. 2-10 of the paper)."""
+"""Loss components used by RIRCI."""
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision import models
 
 
 def l1_relative(reconstructed, real, mask):
-    """Masked L1 loss normalised by the mask area (Eq. 3)."""
+    """Masked L1 loss normalised by the mask area."""
     batch = real.size(0)
     area = torch.sum(mask.view(batch, -1), dim=1)
     reconstructed = reconstructed * mask
@@ -60,12 +61,16 @@ class VGG16FeatureExtractor(nn.Module):
 
 
 class VGGLossX(nn.Module):
-    """Perceptual loss on three VGG16 feature levels (Eq. 4)."""
+    """Perceptual loss on three VGG16 feature levels.
 
-    def __init__(self, normalize=True):
+    Returns both the content term and, when enabled, the style (Gram) term.
+    """
+
+    def __init__(self, normalize=True, use_style=False):
         super(VGGLossX, self).__init__()
         self.vgg = VGG16FeatureExtractor().cuda()
         self.criterion = nn.L1Loss().cuda()
+        self.use_style = use_style
         if normalize:
             self.normalize = MeanShift([0.485, 0.456, 0.406],
                                        [0.229, 0.224, 0.225], norm=True).cuda()
@@ -79,11 +84,21 @@ class VGGLossX(nn.Module):
 
         x_vgg = self.vgg(x)
         y_vgg = self.vgg(y)
-        loss = 0
+        content = 0
+        style = 0
         for i in range(3):
-            loss += self.criterion(x_vgg[i], y_vgg[i].detach())
-        return loss
+            content += self.criterion(x_vgg[i], y_vgg[i].detach())
+            if self.use_style:
+                style += F.l1_loss(self.gram_matrix(x_vgg[i]),
+                                   self.gram_matrix(y_vgg[i].detach()))
+        return {"content": content, "style": style}
+
+    @staticmethod
+    def gram_matrix(feat):
+        (b, ch, h, w) = feat.size()
+        feat = feat.view(b, ch, h * w)
+        return torch.bmm(feat, feat.transpose(1, 2)) / (ch * h * w)
 
 
-def VGGLoss():
-    return VGGLossX()
+def VGGLoss(style=False):
+    return VGGLossX(use_style=style)

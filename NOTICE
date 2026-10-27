@@ -27,6 +27,10 @@ licenses and notices apply to the corresponding files.
    License: MIT
    Files: pytorch_ssim/__init__.py
 
+5. pytorch_iou (IoU loss)
+   Vendored without an upstream header; the original terms apply.
+   Files: pytorch_iou/__init__.py
+
 The stage-2 design (dual-path background restoration with global/local context
 interaction and non-local fusion) and its loss terms are the contribution of
 this paper.
