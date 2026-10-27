@@ -16,7 +16,7 @@ import src.models as models
 from options import Options
 import torch.nn.functional as F
 import pytorch_ssim
-from evaluation import compute_IoU, FScore, AverageMeter, compute_RMSE, normPRED
+from evaluation import compute_IoU, FScore, AverageMeter, compute_RMSE
 from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 from skimage.metrics import structural_similarity as ssim
 import time
@@ -94,8 +94,6 @@ def main(args):
     psnresx = AverageMeter()
     maskIoU = AverageMeter()
     maskF1 = AverageMeter()
-    prime_maskIoU = AverageMeter()
-    prime_maskF1 = AverageMeter()
     processTime = AverageMeter()
 
     prediction_dir = os.path.join(args.checkpoint, 'results')
@@ -161,10 +159,10 @@ def main(args):
                     verbose=False
                 )
             if i % 100 == 0:
-                print("Batch[%d/%d]| PSNR:%.4f | SSIM:%.4f | RMSE:%.4f | RMSEw:%.4f | primeIoU:%.4f, primeF1:%.4f | maskIoU:%.4f | maskF1:%.4f | time:%.2f"
-                %(i,len(model.val_loader),psnresx.avg,ssimesx.avg, rmses.avg, rmsews.avg, prime_maskIoU.avg, prime_maskF1.avg, maskIoU.avg, maskF1.avg, processTime.avg))
-    print("Total:\nPSNR:%.4f | SSIM:%.4f | RMSE:%.4f | RMSEw:%.4f | primeIoU:%.4f, primeF1:%.4f | maskIoU:%.4f | maskF1:%.4f | time:%.2f"
-                %(psnresx.avg,ssimesx.avg, rmses.avg, rmsews.avg, prime_maskIoU.avg, prime_maskF1.avg, maskIoU.avg, maskF1.avg, processTime.avg))
+                print("Batch[%d/%d]| PSNR:%.4f | SSIM:%.4f | RMSE:%.4f | RMSEw:%.4f | maskIoU:%.4f | maskF1:%.4f | time:%.2f"
+                %(i,len(model.val_loader),psnresx.avg,ssimesx.avg, rmses.avg, rmsews.avg, maskIoU.avg, maskF1.avg, processTime.avg))
+    print("Total:\nPSNR:%.4f | SSIM:%.4f | RMSE:%.4f | RMSEw:%.4f | maskIoU:%.4f | maskF1:%.4f | time:%.2f"
+                %(psnresx.avg,ssimesx.avg, rmses.avg, rmsews.avg, maskIoU.avg, maskF1.avg, processTime.avg))
     print("DONE.\n")
 
 

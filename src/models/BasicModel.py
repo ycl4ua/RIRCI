@@ -13,8 +13,7 @@ import src.networks as nets
 from math import log10
 from evaluation import AverageMeter
 import pytorch_ssim as pytorch_ssim
-from src.utils.osutils import mkdir_p, isfile, isdir, join
-from src.utils.parallel import DataParallelModel, DataParallelCriterion
+from src.utils.osutils import mkdir_p, isdir
 from src.utils.losses import VGGLoss
 
 

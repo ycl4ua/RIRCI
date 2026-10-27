@@ -9,7 +9,6 @@ import numpy as np
 from .BasicModel import BasicModel
 from evaluation import AverageMeter, compute_IoU, FScore, compute_RMSE
 import torch.nn.functional as F
-from src.utils.parallel import DataParallelModel, DataParallelCriterion
 from src.utils.losses import VGGLoss, l1_relative,is_dic
 import pytorch_iou
 

@@ -8,7 +8,6 @@ import functools
 import math
 import numbers
 
-from src.utils.model_init import *
 from torch import nn, cuda
 from torch.autograd import Variable
 from src.modules.FFT import FFC_BN_ACT

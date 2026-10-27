@@ -89,7 +89,6 @@ rate `1e-3`, 100 epochs, batch size 8, and the learning rate decayed at epoch
 paper (default `0.75`). Checkpoints, TensorBoard logs and the resolved command
 line are written under `checkpoints/<name>/`.
 
-**Trained weights are not released with this repository.**
 
 ## Evaluation
 
