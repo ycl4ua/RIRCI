@@ -74,6 +74,46 @@ pip install -r requirements.txt
 The code targets Python 3.8+ and a CUDA GPU. The perceptual loss uses a
 torchvision VGG16 backbone, whose weights are downloaded on first use.
 
+## Pretrained model
+
+A pretrained RIRCI checkpoint is available on Google Drive:
+
+- [model_best.pth.tar](https://drive.google.com/file/d/1AVoGtArYq4HasdNUqa33cAjAKKy44Ek5/view?usp=sharing) (~104 MB)
+
+Save it as `checkpoints/rirci/model_best.pth.tar` (or pass its full path to
+`--resume`). The file contains the complete two-stage model, including the
+stage-1 mask/background-component branches and the stage-2 dual-path
+restoration and fusion network, so it can be used directly with `test.py` and
+`infer.py` without any conversion.
+
+With the checkpoint in place, run evaluation or inference as follows:
+
+```bash
+# Evaluation on a split laid out like the one described below.
+python test.py \
+    --evaluate \
+    --dataset rirci \
+    --eval_split val \
+    --dataset_dir /path/to/RIRCI \
+    --checkpoint checkpoints \
+    --name rirci \
+    --nets rirci \
+    --models rirci \
+    --input-size 256 \
+    --crop_size 256 \
+    --use_refine \
+    --resume checkpoints/rirci/model_best.pth.tar
+
+# Inference on a single image or a folder of images.
+python infer.py \
+    --resume checkpoints/rirci/model_best.pth.tar \
+    --input path/to/image_or_folder \
+    --output inference_output
+```
+
+`--resume` is the correct option for loading this checkpoint. The model is
+trained at 256x256, so inputs are resized to `--crop_size` during inference.
+
 ## Training
 
 ```bash
@@ -99,15 +139,22 @@ line are written under `checkpoints/<name>/`.
 ```bash
 python test.py \
     --evaluate \
+    --dataset rirci \
     --dataset_dir /path/to/RIRCI \
     --checkpoint checkpoints \
     --name rirci \
-    --resume checkpoints/rirci/model_best.pth.tar \
-    --eval_split val
+    --nets rirci \
+    --models rirci \
+    --eval_split val \
+    --input-size 256 \
+    --crop_size 256 \
+    --use_refine \
+    --resume checkpoints/rirci/model_best.pth.tar
 ```
 
-`--eval_split` selects the `valid/` directory (default) or `test/`. The script
-reports PSNR, SSIM, RMSE, RMSE_w, mask IoU and mask F1, and saves
+or `DATASET_DIR=/path/to/RIRCI bash scripts/test.sh`. `--eval_split` selects
+the `valid/` directory (default) or `test/`. The script reports PSNR, SSIM,
+RMSE, RMSE_w, mask IoU and mask F1, and saves
 `[input | ground truth | prediction | I_r | I_i | Ĉ_b]` panels under
 `checkpoints/<name>/results/`.
 
@@ -121,13 +168,14 @@ python infer.py \
 ```
 
 Each output is an `[input | restored | predicted mask]` panel. Inputs are
-resized to `--crop_size` (256 by default).
+resized to `--crop_size` (256 by default). `--resume` can point to the
+pretrained checkpoint described above or to your own trained model.
 
 ## Dataset construction
 
-**The HWVOC and PW datasets are not released with this repository.** The layout
-below is what the reader expects, so you can build a compatible split from your
-own background images and watermarks.
+**The HWVOC and PW datasets will not be released publicly.** The layout below
+is what the reader expects, so you can build a compatible split from your own
+background images and watermarks.
 
 ### Directory layout
 
@@ -209,7 +257,8 @@ matching stems.
   module are this paper's contribution. See `NOTICE` for upstream projects.
 - There is no built-in data generator: the paper's datasets were produced by
   randomly scaling, rotating and placing watermark logos on background images,
-  then saving the five folders described above.
+  then saving the five folders described above. The HWVOC and PW datasets
+  themselves are not publicly released.
 
 ## Citation
 
