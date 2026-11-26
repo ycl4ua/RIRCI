@@ -80,7 +80,8 @@ A pretrained RIRCI checkpoint is available on Google Drive:
 
 - [model_best.pth.tar](https://drive.google.com/file/d/1AVoGtArYq4HasdNUqa33cAjAKKy44Ek5/view?usp=sharing) (~104 MB)
 
-Save it as `checkpoints/rirci/model_best.pth.tar` (or pass its full path to
+The checkpoint was trained on the HWVOC dataset. Save it as
+`checkpoints/rirci/model_best.pth.tar` (or pass its full path to
 `--resume`). The file contains the complete two-stage model, including the
 stage-1 mask/background-component branches and the stage-2 dual-path
 restoration and fusion network, so it can be used directly with `test.py` and
